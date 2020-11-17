@@ -11,7 +11,7 @@
 
 using namespace std;
 double xpos_old, ypos_old;
-ofstream myfile, skeleton;
+ofstream myfile, skeleton, energy;
 
 void writeToFile(string content)
 {
@@ -56,12 +56,13 @@ int main(int argc, char **argv)
         Creature robot(20, 1, 1);
 
         // init file
-        myfile.open("energy.txt");
+        energy.open("energy.txt");
         skeleton.open("skeleton.txt");
+        myfile.open("random-" + to_string(t) + ".txt");
 
         int frameNum = 0;
         float bestDistance = 0;
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < 100000; i++)
         {
             robot.settle();
             robot.measurePerformance();
@@ -70,11 +71,13 @@ int main(int argc, char **argv)
                 bestDistance = robot.scaledCentroidX;
             }
             cout << "Iterations: " << i << ", best: " << bestDistance << endl;
+            writeToFile(to_string(bestDistance) + "\n");
             robot.mutate(1);
         }
 
         robot.saveSkeleton(skeleton);
 
+        energy.close();
         myfile.close();
         skeleton.close();
     }
