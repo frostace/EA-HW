@@ -4,6 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include "Constants.h"
+#include <uuid/uuid.h>
 #include <cmath>
 #include <memory>
 
@@ -16,6 +17,38 @@
 class Mass
 {
 private:
+    void genUUID()
+    {
+        uuid_t binuuid;
+        /*
+        * Generate a UUID. We're not done yet, though,
+        * for the UUID generated is in binary format 
+        * (hence the variable name). We must 'unparse' 
+        * binuuid to get a usable 36-character string.
+        */
+        uuid_generate_random(binuuid);
+
+        /*
+        * uuid_unparse() doesn't allocate memory for itself, so do that with
+        * malloc(). 37 is the length of a UUID (36 characters), plus '\0'.
+        */
+        idx = (char *)malloc(37);
+
+#ifdef capitaluuid
+        /* Produces a UUID string at uuid consisting of capital letters. */
+        uuid_unparse_upper(binuuid, idx);
+#elif lowercaseuuid
+        /* Produces a UUID string at uuid consisting of lower-case letters. */
+        uuid_unparse_lower(binuuid, idx);
+#else
+        /*
+        * Produces a UUID string at uuid consisting of letters
+        * whose case depends on the system's locale.
+        */
+        uuid_unparse(binuuid, idx);
+#endif
+    }
+
 public:
     bool grounded = false;
     float mass = 1.0f;
@@ -31,6 +64,7 @@ public:
         pos[0] = x;
         pos[1] = y;
         pos[2] = z;
+        genUUID();
     }
 
     ~Mass()
@@ -77,13 +111,16 @@ public:
 
     void addGroundForce()
     {
-        force[2] += -k_ground * std::min((float)0.0f, pos[2]);
-        // if (pos[2] < 0)
-        //     vel[2] = abs(vel[2]);
+        // force[2] += -k_ground * std::min((float)0.0f, pos[2]);
+        if (pos[2] < 0)
+            vel[2] = abs(vel[2]);
     }
 
     void addFriction()
     {
+        if (force[2] > 0)
+            return;
+        // only if normal pressure is pointing to the ground
         float static_fmax = friction_mu_s * abs(force[2]);
         float fh = std::sqrt(force[0] * force[0] + force[1] * force[1]);
 
@@ -108,6 +145,13 @@ public:
         force[0] = 0;
         force[1] = 0;
         force[2] = 0;
+    }
+
+    void clearMotion()
+    {
+        vel = {0, 0, 0};
+        acc = {0, 0, 0};
+        force = {0, 0, 0};
     }
 
     float getPotentialEnergy()

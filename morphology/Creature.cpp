@@ -20,8 +20,12 @@
 class Creature
 {
 private:
-    std::unordered_set<std::string> visited = {}; // deprecated
-                                                  // maintain indices of masses of initialized springs, e.g. "i1,j1,k1&i2,j2,k2"
+    int idim, jdim, kdim;
+    bool settled = false;
+    std::unordered_map<std::string, std::vector<float>> settledPos = {}; // map mass hashing to mass settled positions
+    std::unordered_set<std::string> visited = {};                        // deprecated
+
+    // maintain indices of masses of initialized springs, e.g. "i1,j1,k1&i2,j2,k2"
     std::unordered_map<std::string, std::shared_ptr<Spring>> springs = {};
     // init masses with corresponding positions within the 3d grid
     std::unordered_map<std::string, std::shared_ptr<Mass>> masses = {};
@@ -75,6 +79,18 @@ private:
                 return cube_types[p];
         }
         return cube_types[4];
+    }
+
+    int hardCodeType(float i, float j, float k)
+    {
+        if (k == 0)
+        {
+            if (i == 1 || j == 1)
+            {
+                return 4;
+            }
+        }
+        return rand() % 4;
     }
 
     void initPlaneArgMap()
@@ -161,6 +177,9 @@ private:
 
 public:
     Cube core;
+    int latestMutatedCubeIdx;
+    int latestMutatedSpringIdx;
+    int latestMutationType;
     std::vector<Cube> cubes = {};
     float totalEk;
     float totalEp;
@@ -168,8 +187,6 @@ public:
     float scaledCentroidX = 0;
     float scaledCentroidXOffset = 0;
     float XScale = 0;
-    // std::vector<std::shared_ptr<Mass>> masses = {};
-    // std::vector<std::shared_ptr<Spring>> springs = {};
 
     Creature(float x, float y, float z) : core(x, y, z)
     {
@@ -181,75 +198,18 @@ public:
         create(core, 0, x, y, z);
     }
     // constructor for n * n * n cubes
-    Creature(int n)
+    Creature(int n) : idim{n}, jdim{n}, kdim{n}
     {
-        XScale = n + 1;
-        // init plane_arg_map
-        initPlaneArgMap();
-
-        for (int i = 0; i <= n; i++)
-        {
-            for (int j = 0; j <= n; j++)
-            {
-                for (int k = 0; k <= n; k++)
-                {
-                    std::shared_ptr<Mass> m(new Mass(i, j, k));
-                    masses[hashing(i, j, k)] = m;
-                }
-            }
-        }
-        // init springs with indices of masses within the 3d grid
-        for (int i = 0; i < n; i++)
-        {
-            for (int j = 0; j < n; j++)
-            {
-                for (int k = 0; k < n; k++)
-                {
-                    // int type = rand() % 5; // cube type
-                    int type = assignType(i, j, k);
-                    std::vector<std::shared_ptr<Mass>> cubeMasses = {};
-                    std::vector<std::shared_ptr<Spring>> cubeSprings = {};
-                    // iterate through all coords to maintian masses in the same cube
-                    for (int d1 = 0; d1 < 8; d1++)
-                    {
-                        int x1 = i + cube8dirs[d1][0];
-                        int y1 = j + cube8dirs[d1][1];
-                        int z1 = k + cube8dirs[d1][2];
-                        cubeMasses.push_back(masses[hashing(x1, y1, z1)]);
-                    }
-
-                    // iterate through all pairs of masses to init springs
-                    for (int d1 = 0; d1 < 7; d1++)
-                    {
-                        for (int d2 = d1 + 1; d2 < 8; d2++)
-                        {
-                            int x1 = i + cube8dirs[d1][0];
-                            int y1 = j + cube8dirs[d1][1];
-                            int z1 = k + cube8dirs[d1][2];
-                            int x2 = i + cube8dirs[d2][0];
-                            int y2 = j + cube8dirs[d2][1];
-                            int z2 = k + cube8dirs[d2][2];
-                            std::string springIdx = hashing(x1, y1, z1, x2, y2, z2);
-                            // spring reference already exist
-                            if (springs.find(springIdx) != springs.end())
-                            {
-                                cubeSprings.push_back(springs[springIdx]);
-                                continue;
-                            }
-                            std::shared_ptr<Spring> s(new Spring(type, masses[hashing(x1, y1, z1)], masses[hashing(x2, y2, z2)]));
-                            springs[springIdx] = s;
-                            cubeSprings.push_back(s);
-                        }
-                    }
-                    Cube c(type, cubeMasses, cubeSprings);
-                    cubes.push_back(c);
-                    // std::cout << "==========" << std::endl;
-                }
-            }
-        }
+        initCreature(n, n, n, 0);
     }
     // constructor for imax * jmax * kmax cubes
-    Creature(int imax, int jmax, int kmax)
+    Creature(int imax, int jmax, int kmax) : idim{imax}, jdim{jmax}, kdim{kmax}
+    {
+        initCreature(imax, jmax, kmax, 0);
+    }
+    ~Creature() {}
+
+    void initCreature(int imax, int jmax, int kmax, int hOffset)
     {
         XScale = std::max(std::max(imax, jmax), kmax) + 1;
         // init plane_arg_map
@@ -261,7 +221,7 @@ public:
             {
                 for (int k = 0; k <= kmax; k++)
                 {
-                    std::shared_ptr<Mass> m(new Mass(i, j, k));
+                    std::shared_ptr<Mass> m(new Mass(i, j, k + hOffset));
                     masses[hashing(i, j, k)] = m;
                 }
             }
@@ -274,7 +234,8 @@ public:
                 for (int k = 0; k < kmax; k++)
                 {
                     // int type = assignType(i, j, k);
-                    int type = 3;
+                    // int type = rand() % 4;
+                    int type = hardCodeType(i, j, k);
                     std::vector<std::shared_ptr<Mass>> cubeMasses = {};
                     std::vector<std::shared_ptr<Spring>> cubeSprings = {};
                     // iterate through all pairs of masses to assign masses
@@ -328,19 +289,7 @@ public:
                 }
             }
         }
-
-        // std::cout << "all masses: " << masses.size() << std::endl;
-        // std::cout << "all springs: " << springs.size() << std::endl;
-
-        // for (auto &it : springs)
-        // {
-        //     std::cout << it.first << std::endl;
-        // }
-
-        // cubes[0].masses[0]->grounded = true;
     }
-    ~Creature() {}
-
     void iterate()
     {
         auto start = std::chrono::system_clock::now();
@@ -357,6 +306,7 @@ public:
             totalEk += cube.totalEk;
             totalEp += cube.totalEp;
         }
+
         for (auto &cube : cubes)
         {
             cube.clearComputed();
@@ -397,13 +347,99 @@ public:
         // std::cout << to_string(28 / elapsed_seconds.count()) << std::endl;
     }
 
-    void mutate(float mutateRate)
+    void mutate()
     {
-        // mutate a single cube
-        if (rand() / (float)RAND_MAX < mutateRate)
+        // donot mutate air to other materials
+        latestMutatedCubeIdx = rand() % cubes.size();
+        if (cubes[latestMutatedCubeIdx].currType == 4)
         {
-            cubes[rand() % cubes.size()].mutate();
+            latestMutationType = 2;
+            return;
         }
+        // mutate a single cube
+        float randomP = rand() / (float)RAND_MAX;
+        if (randomP < 0.9) // 0.8 * 0.15 = 0.12
+        {
+            // update a random spring arguments
+            latestMutationType = 0;
+            latestMutatedSpringIdx = rand() % 28;
+            cubes[latestMutatedCubeIdx].mutate(latestMutatedSpringIdx);
+        }
+        else // 0.2 * 0.15 = 0.03
+        {
+            // switch cube type
+            latestMutationType = 1;
+            cubes[latestMutatedCubeIdx].mutate();
+        }
+    }
+
+    void recover()
+    {
+        if (latestMutationType == 0) // spring param
+        {
+            cubes[latestMutatedCubeIdx].recover(latestMutatedSpringIdx);
+        }
+        else if (latestMutationType == 1) // switch cube type
+        {
+            cubes[latestMutatedCubeIdx].recover();
+        }
+    }
+
+    void reborn()
+    {
+        cubes.clear();
+        std::cout << "idim: " << idim << "jdim: " << jdim
+                  << "kdim: " << kdim << std::endl;
+        // init springs with indices of masses within the 3d grid
+        for (int i = 0; i < idim; i++)
+        {
+            for (int j = 0; j < jdim; j++)
+            {
+                for (int k = 0; k < kdim; k++)
+                {
+                    // int type = assignType(i, j, k);
+                    int type = rand() % 5;
+                    std::vector<std::shared_ptr<Mass>> cubeMasses = {};
+                    std::vector<std::shared_ptr<Spring>> cubeSprings = {};
+                    // iterate through all pairs of masses to assign masses
+                    for (int d1 = 0; d1 < 8; d1++)
+                    {
+                        int x1 = i + cube8dirs[d1][0];
+                        int y1 = j + cube8dirs[d1][1];
+                        int z1 = k + cube8dirs[d1][2];
+                        cubeMasses.push_back(masses[hashing(x1, y1, z1)]);
+                    }
+
+                    // iterate through all pairs of masses to init springs
+                    for (int d1 = 0; d1 < 7; d1++)
+                    {
+                        for (int d2 = d1 + 1; d2 < 8; d2++)
+                        {
+                            int x1 = i + cube8dirs[d1][0];
+                            int y1 = j + cube8dirs[d1][1];
+                            int z1 = k + cube8dirs[d1][2];
+                            int x2 = i + cube8dirs[d2][0];
+                            int y2 = j + cube8dirs[d2][1];
+                            int z2 = k + cube8dirs[d2][2];
+                            std::string springIdx = hashing(x1, y1, z1, x2, y2, z2);
+                            // spring reference already exist
+                            if (springs.find(springIdx) != springs.end())
+                            {
+                                cubeSprings.push_back(springs[springIdx]);
+                                continue;
+                            }
+                            std::shared_ptr<Spring> s(new Spring(type, masses[hashing(x1, y1, z1)], masses[hashing(x2, y2, z2)]));
+                            springs[springIdx] = s;
+                            cubeSprings.push_back(s);
+                        }
+                    }
+                    Cube c(type, cubeMasses, cubeSprings);
+                    cubes.push_back(c);
+                }
+            }
+        }
+
+        settled = false;
     }
 
     void saveSkeleton(std::ofstream &file)
@@ -411,20 +447,92 @@ public:
         if (file.is_open())
         {
             std::string content = "";
+            // write cube types in line
+            // TODO: to be tested
+            for (auto &cube : cubes)
+            {
+                content += std::to_string(cube.currType) + ", ";
+            }
+            content += "\n";
             for (auto &it : springs)
             {
-                content += it.first + ": " + std::to_string(it.second->k) + ", " + std::to_string(it.second->b) + ", " + std::to_string(it.second->c) + "\n";
+                content += it.first + ": k=" + std::to_string(it.second->k) + ", b=" + std::to_string(it.second->b) + ", c=" + std::to_string(it.second->c) + "\n";
             }
             file << content;
         }
     }
 
-    void loadSkeleton(std::ofstream &file)
+    std::vector<int> saveTypes()
     {
+        std::vector<int> output = {};
+        for (auto &cube : cubes)
+        {
+            output.push_back(cube.currType);
+        }
+
+        return output;
+    }
+
+    void loadSkeleton(const std::string &filepath)
+    {
+        std::ifstream stream(filepath);
+
+        std::string line;
+        std::string delimiter = ", ";
+
+        // load cube types
+        // TODO: to be tested
+        getline(stream, line);
+        auto start = 0U;
+        auto end = line.find(delimiter);
+        int cubeIdx = 0;
+        while (end != std::string::npos)
+        {
+            int type = std::stof(line.substr(start, end - start));
+            cubes[cubeIdx++].overrideType(type);
+            start = end + delimiter.length();
+            end = line.find(delimiter, start);
+        }
+
+        // int type = std::stof(line.substr(start, end));
+        // cubes[cubeIdx].currType = type;
+        // cubes[cubeIdx].fillArrWithColor(cubes[cubeIdx].color, cube_colors[type]);
+        // cubeIdx += 1;
+
+        // load k, b, c
+        while (getline(stream, line))
+        {
+            size_t k_pos = line.find("k=") + 2;
+            size_t b_pos = line.find("b=") + 2;
+            size_t c_pos = line.find("c=") + 2;
+            std::string hashedIdx = line.substr(0, k_pos - 4);
+            float k_val = std::stof(line.substr(k_pos, b_pos - k_pos - 4));
+            float b_val = std::stof(line.substr(b_pos, c_pos - b_pos - 4));
+            float c_val = std::stof(line.substr(c_pos));
+
+            // assign set of [k,b,c] received from skeleton file
+            springs[hashedIdx]->k = k_val;
+            springs[hashedIdx]->b = b_val;
+            springs[hashedIdx]->c = c_val;
+        }
     }
 
     void settle()
     {
+        // check if have computed settled positions
+        if (settled)
+        {
+            // pass computed settled positions to masses and return
+            for (auto &it : masses)
+            {
+                it.second->pos = settledPos[it.first]; // assign settled positions by order of insertion
+                it.second->clearMotion();
+            }
+            return;
+        }
+
+        settled = true;
+
         // iterate without breathing
         int frameNum = 0;
         // Loop for several iterations and measure X distance at the end
@@ -434,6 +542,12 @@ public:
             iterate(false);
             // std::cout << "i: " << frameNum << ", cube pos: " << scaledCentroidX << std::endl;
         }
+        // record settled positions
+        for (auto &it : masses)
+        {
+            settledPos[it.first] = it.second->pos;
+            it.second->clearMotion();
+        }
         scaledCentroidXOffset = centroidX / XScale;
     }
 
@@ -441,12 +555,11 @@ public:
     {
         int frameNum = 0;
         // Loop for several iterations and measure X distance at the end
-        while (frameNum < 1250)
+        while (frameNum < 250)
         {
             frameNum += 1;
             iterate();
         }
-        // std::cout << "robot dist: " << scaledCentroidX << std::endl;
     }
 
     void printInfo()
@@ -460,15 +573,16 @@ public:
         // }
         for (auto &cube : cubes)
         {
-            // for (int idx = 0; idx < 8; idx++)
-            // {
-            //     std::cout << "idx: " << idx << std::endl;
-            //     cube.masses[idx]->printInfo();
-            // }
-            for (int idx = 0; idx < 28; idx++)
+            std::cout << "cube type: " << cube.currType << std::endl;
+            for (int idx = 0; idx < 8; idx++)
             {
-                cube.springs[idx]->printInfo();
+                std::cout << "idx: " << idx << std::endl;
+                cube.masses[idx]->printInfo();
             }
+            // for (int idx = 0; idx < 28; idx++)
+            // {
+            //     cube.springs[idx]->printInfo();
+            // }
             std::cout << "============" << std::endl;
         }
     }

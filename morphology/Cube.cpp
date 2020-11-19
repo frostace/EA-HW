@@ -5,12 +5,12 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <memory>
 
 #include "Mass.cpp"
 #include "Spring.cpp"
 #include "Constants.h"
 #include "omp.h"
-#include <memory>
 
 class Cube
 {
@@ -133,6 +133,10 @@ public:
     float totalEp = 0.0f; // total potential energy
     float totalEk = 0.0f; // total kinetic energy
     float centroidX = 0.0f;
+    int prevType;
+    float prevB;
+    float prevC;
+    int currType;
 
     float positions[108] = {};
     float vertices[24] = {
@@ -178,6 +182,7 @@ public:
 
     Cube(int type, std::vector<std::shared_ptr<Mass>> &massArray, std::vector<std::shared_ptr<Spring>> &springArray)
     {
+        currType = type;
         fillArrWithColor(color, cube_colors[type]);
         initMasses(massArray);
         initSprings(springArray);
@@ -211,7 +216,7 @@ public:
 
         // int springCount = 0;
         // int massCount = 0;
-#pragma omp parallel for
+        // #pragma omp parallel for
         for (int i = 0; i < springs.size(); i++)
         {
             auto s = springs[i];
@@ -229,7 +234,7 @@ public:
         }
 
         // apply force on each mass
-#pragma omp parallel for
+        // #pragma omp parallel for
         for (int i = 0; i < masses.size(); i++)
         {
             auto m = masses[i];
@@ -244,35 +249,10 @@ public:
 
             // compute mass potential energy and kinetic energy
             totalEp += m->getPotentialEnergy();
-            totalEp += m->getGroundPotentialEnergy();
+            // totalEp += m->getGroundPotentialEnergy();
             totalEk += m->getKineticEnergy();
         }
     }
-
-    //     void iterate()
-    //     {
-    // #pragma omp parallel
-    //         {
-    //             int id, nthrds, niters;
-    //             id = omp_get_thread_num();
-    //             nthrds = omp_get_num_threads();
-    //             niters = std::ceil(springs.size() / nthrds);
-    //             // compute recovery force for each spring
-    //             for (int i = id * nthrds; i < id * nthrds + niters; i += 1)
-    //             {
-    //                 // duplicate computation avoidance
-    //                 if (i >= 28 || springs[i]->computed)
-    //                     continue;
-    //                 springs[i]->cumulateRestoreForceToConnectedMasses();
-
-    //                 springs[i]->computed = true;
-
-    //                 // compute spring potential energy
-    //                 totalEp += springs[i]->getPotentialEnergy();
-    //                 // springCount += 1;
-    //             }
-    //         }
-    //     }
 
     void integrate()
     {
@@ -301,15 +281,45 @@ public:
 
     void mutate()
     {
-        // switch type
-        int type = rand() % 5;
-        fillArrWithColor(color, cube_colors[type]);
+        // switch cube type
+        prevType = currType;
+        currType = rand() % 4;
+        fillArrWithColor(color, cube_colors[currType]);
         for (auto &s : springs)
         {
-            s->k = k_spring[type];
-            s->b = s->b * genMagnitude();
-            s->c = s->c * genMagnitude();
+            s->k = k_spring[currType];
+            s->b = b_spring[currType];
+            s->c = c_spring[currType];
         }
+    }
+
+    void mutate(int springIdx)
+    {
+        // mutate spring idx
+        prevB = springs[springIdx]->b;
+        prevC = springs[springIdx]->c;
+        springs[springIdx]->b = (prevB + 0.01) * genMagnitude();
+        springs[springIdx]->c = (prevC + 0.01) * genMagnitude();
+    }
+
+    void recover()
+    {
+        // revert cube type back to previous type
+        currType = prevType;
+        fillArrWithColor(color, cube_colors[currType]);
+        for (auto &s : springs)
+        {
+            s->k = k_spring[currType];
+            s->b = b_spring[currType];
+            s->c = c_spring[currType];
+        }
+    }
+
+    void recover(int springIdx)
+    {
+        // revert spring params back to prev set of params
+        springs[springIdx]->b = prevB;
+        springs[springIdx]->c = prevC;
     }
 
     void updatePositions()
@@ -322,6 +332,12 @@ public:
             positions[i++] = masses[idx]->pos[1];
             positions[i++] = masses[idx]->pos[2];
         }
+    }
+
+    void overrideType(int type)
+    {
+        currType = type;
+        fillArrWithColor(color, cube_colors[type]);
     }
 
     void printInfo()

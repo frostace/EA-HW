@@ -6,15 +6,14 @@
 #include <cstdlib>
 #include <chrono>
 #include <ctime>
+#include <memory>
 
 #include "Mass.cpp"
 #include "Constants.h"
+#include <uuid/uuid.h>
 
-/* Uncomment to always generate capital UUIDs. */
-//#define capitaluuid true
-
-/* Uncomment to always generate lower-case UUIDs. */
-//#define lowercaseuuid true
+extern float breathingT0; // breathingT0 = -1.0f indicates that breathing hasn't been started
+extern int iterNums;
 
 class Spring
 {
@@ -22,7 +21,38 @@ private:
     // l0 = l00 * (1 + b * sin(wt + c))
     float l0;  // dynamic rest length
     float l00; // maintain static rest length
-    float w = 20 * pi;
+    float w = (float)k_w;
+    void genUUID()
+    {
+        uuid_t binuuid;
+        /*
+        * Generate a UUID. We're not done yet, though,
+        * for the UUID generated is in binary format 
+        * (hence the variable name). We must 'unparse' 
+        * binuuid to get a usable 36-character string.
+        */
+        uuid_generate_random(binuuid);
+
+        /*
+        * uuid_unparse() doesn't allocate memory for itself, so do that with
+        * malloc(). 37 is the length of a UUID (36 characters), plus '\0'.
+        */
+        idx = (char *)malloc(37);
+
+#ifdef capitaluuid
+        /* Produces a UUID string at uuid consisting of capital letters. */
+        uuid_unparse_upper(binuuid, idx);
+#elif lowercaseuuid
+        /* Produces a UUID string at uuid consisting of lower-case letters. */
+        uuid_unparse_lower(binuuid, idx);
+#else
+        /*
+        * Produces a UUID string at uuid consisting of letters
+        * whose case depends on the system's locale.
+        */
+        uuid_unparse(binuuid, idx);
+#endif
+    }
 
 public:
     float k = k_vertices_soft;
@@ -38,6 +68,7 @@ public:
         m2 = m02;
         l0 = l;
         l00 = l;
+        genUUID();
     }
     Spring(int type, std::shared_ptr<Mass> m01, std::shared_ptr<Mass> m02)
     {
@@ -48,6 +79,7 @@ public:
         k = k_spring[type];
         b = b_spring[type];
         c = c_spring[type];
+        genUUID();
     }
     Spring(std::shared_ptr<Mass> &m01, std::shared_ptr<Mass> &m02)
     {
@@ -56,6 +88,7 @@ public:
         // l0 = 0.01 * rand() / double(RAND_MAX) + getCurLen();
         l0 = getCurLen();
         l00 = l0;
+        genUUID();
     }
     ~Spring()
     {
@@ -96,13 +129,27 @@ public:
 
     void breathe()
     {
-        auto t = std::chrono::system_clock::now();
-        std::time_t time = std::chrono::system_clock::to_time_t(t);
+        // make initial w * t + c = 0, otherwise, cube would explode
+        auto t_clock = std::chrono::system_clock::now();
+        std::time_t time = std::chrono::system_clock::to_time_t(t_clock);
         std::ctime(&time);
         float time_float = time;
+        float t;
 
-        l0 = l00 * (1 + b * sin(w * time_float + c));
-        // l0 = l00 + 0.1 * sin(time_float);
+        if (breathingT0 == -1.0f)
+        {
+            breathingT0 = -time - c / w;
+            t = -c / w;
+        }
+        else
+        {
+            // already started breathing
+            t = time + breathingT0;
+        }
+
+        t = iterNums * dt - c / w;
+
+        l0 = l00 * (1 + b * sin(w * t + c));
     }
 
     void printInfo()
