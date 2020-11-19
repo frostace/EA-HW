@@ -13,7 +13,7 @@ double omega = 10;
 const float pi = 3.1415926535897932384626;
 const double k_w = 20 * pi;
 
-std::vector<float> k_spring = {1000, 20000, 2000, 2000, 0};
+std::vector<float> k_spring = {2000, 20000, 2000, 2000, 0};
 std::vector<float> b_spring = {0, 0, 0.02, 0.02, 0};
 std::vector<float> c_spring = {0, 0, 0, pi, 0};
 std::vector<std::vector<float>> cube_colors = {

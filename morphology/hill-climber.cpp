@@ -88,7 +88,7 @@ void hill_climber()
         bestRobot = patrols[winnerIdx];
 
 #pragma omp for
-        for (int i = 0; i < 1000; i++)
+        for (int i = 0; i < 10000; i++)
         {
             int id, niters;
             id = omp_get_thread_num();
@@ -122,7 +122,7 @@ void hill_climber()
             }
 
             // if stuck times > 1000, refresh patrol
-            if (stuckIterNums[id] > 1000)
+            if (stuckIterNums[id] > 100)
             {
                 patrols[id].reborn();
             }
