@@ -17,6 +17,8 @@
 
 #include "omp.h" // parallel
 
+extern int iterNums;
+
 class Creature
 {
 private:
@@ -292,6 +294,7 @@ public:
     }
     void iterate()
     {
+        iterNums += 1;
         auto start = std::chrono::system_clock::now();
         totalEk = 0;
         totalEp = 0;
@@ -388,8 +391,6 @@ public:
     void reborn()
     {
         cubes.clear();
-        std::cout << "idim: " << idim << "jdim: " << jdim
-                  << "kdim: " << kdim << std::endl;
         // init springs with indices of masses within the 3d grid
         for (int i = 0; i < idim; i++)
         {
@@ -462,6 +463,22 @@ public:
         }
     }
 
+    std::string saveSkeleton()
+    {
+        std::string content = "";
+        // write cube types in line
+        for (auto &cube : cubes)
+        {
+            content += std::to_string(cube.currType) + ", ";
+        }
+        content += "\n";
+        for (auto &it : springs)
+        {
+            content += it.first + ": k=" + std::to_string(it.second->k) + ", b=" + std::to_string(it.second->b) + ", c=" + std::to_string(it.second->c) + "\n";
+        }
+        return content;
+    }
+
     std::vector<int> saveTypes()
     {
         std::vector<int> output = {};
@@ -528,6 +545,7 @@ public:
                 it.second->pos = settledPos[it.first]; // assign settled positions by order of insertion
                 it.second->clearMotion();
             }
+            scaledCentroidX = 0;
             return;
         }
 
@@ -549,6 +567,7 @@ public:
             it.second->clearMotion();
         }
         scaledCentroidXOffset = centroidX / XScale;
+        scaledCentroidX = 0;
     }
 
     void measurePerformance()

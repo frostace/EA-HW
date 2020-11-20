@@ -10,7 +10,6 @@
 
 #include "Mass.cpp"
 #include "Constants.h"
-#include <uuid/uuid.h>
 
 extern float breathingT0; // breathingT0 = -1.0f indicates that breathing hasn't been started
 extern int iterNums;
@@ -22,37 +21,6 @@ private:
     float l0;  // dynamic rest length
     float l00; // maintain static rest length
     float w = (float)k_w;
-    void genUUID()
-    {
-        uuid_t binuuid;
-        /*
-        * Generate a UUID. We're not done yet, though,
-        * for the UUID generated is in binary format 
-        * (hence the variable name). We must 'unparse' 
-        * binuuid to get a usable 36-character string.
-        */
-        uuid_generate_random(binuuid);
-
-        /*
-        * uuid_unparse() doesn't allocate memory for itself, so do that with
-        * malloc(). 37 is the length of a UUID (36 characters), plus '\0'.
-        */
-        idx = (char *)malloc(37);
-
-#ifdef capitaluuid
-        /* Produces a UUID string at uuid consisting of capital letters. */
-        uuid_unparse_upper(binuuid, idx);
-#elif lowercaseuuid
-        /* Produces a UUID string at uuid consisting of lower-case letters. */
-        uuid_unparse_lower(binuuid, idx);
-#else
-        /*
-        * Produces a UUID string at uuid consisting of letters
-        * whose case depends on the system's locale.
-        */
-        uuid_unparse(binuuid, idx);
-#endif
-    }
 
 public:
     float k = k_vertices_soft;
@@ -68,7 +36,6 @@ public:
         m2 = m02;
         l0 = l;
         l00 = l;
-        genUUID();
     }
     Spring(int type, std::shared_ptr<Mass> m01, std::shared_ptr<Mass> m02)
     {
@@ -79,7 +46,6 @@ public:
         k = k_spring[type];
         b = b_spring[type];
         c = c_spring[type];
-        genUUID();
     }
     Spring(std::shared_ptr<Mass> &m01, std::shared_ptr<Mass> &m02)
     {
@@ -88,7 +54,6 @@ public:
         // l0 = 0.01 * rand() / double(RAND_MAX) + getCurLen();
         l0 = getCurLen();
         l00 = l0;
-        genUUID();
     }
     ~Spring()
     {
