@@ -70,9 +70,19 @@ void ea()
                   << " , avg: " << std::to_string(population.fitnessSum / popSize)
                   << std::endl;
 
+        if (population.bestDistance > bestDistance)
+        {
+            bestDistance = population.bestDistance;
+            bestRobotTypes = population.bestRobotTypes;
+        }
+
+        writeToFile(std::to_string(bestDistance));
+
         population.selection();
         population.regenerate(DETERMINISTIC_CROWDING);
     }
+
+    skeleton << bestRobotTypes;
 
     // for loop:
     //      compute fitness for each individual
