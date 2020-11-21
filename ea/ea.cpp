@@ -76,7 +76,7 @@ void ea()
             bestRobotTypes = population.bestRobotTypes;
         }
 
-        writeToFile(std::to_string(bestDistance));
+        writeToFile(std::to_string(bestDistance) + "\n");
 
         population.selection();
         population.regenerate(DETERMINISTIC_CROWDING);
