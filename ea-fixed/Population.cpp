@@ -25,6 +25,7 @@ public:
         for (int i = 0; i < popSize; i++)
         {
             Creature robot(xdim, ydim, zdim);
+            // robot.loadSkeleton("skeleton-3-usable.txt");
             population.push_back(robot);
             Creature dummy(xdim, ydim, zdim);
             dummies.push_back(dummy);
@@ -41,20 +42,29 @@ public:
         {
             robot.settle();
             robot.measurePerformance();
-            fitnessSum += robot.scaledCentroidX;
+            fitnessSum += std::max(0.0f, robot.fitness);
             // TODO: refactor with address update and save at the end instead of frequent saving
-            if (robot.scaledCentroidX > bestDistance)
+            if (robot.fitness > bestDistance)
             {
-                bestDistance = robot.scaledCentroidX;
+                bestDistance = robot.fitness;
                 bestRobotTypes = robot.saveSkeleton();
             }
         }
 
         auto cpr = [&](Creature &robot1, Creature &robot2) -> bool {
-            return robot1.scaledCentroidX > robot2.scaledCentroidX;
+            return robot1.fitness > robot2.fitness;
         };
 
         sort(population.begin(), population.end(), cpr);
+    }
+
+    void printAllFitness()
+    {
+        for (auto &robot : population)
+        {
+            std::cout << robot.fitness << ", ";
+        }
+        std::cout << std::endl;
     }
 
     // compute subjective fitness
@@ -62,12 +72,13 @@ public:
     {
         // TODO: refactor this algorithm and make it compute fitness for both populations within a single loop
         fitnessSum = 0;
+        bestFitness = 0;
         // opponents.fitnessSum = 0;
         // count how many individuals in opponents are worse than individual i
         int idx_j = 0;
         for (int i = 0; i < popSize; i++)
         {
-            while (idx_j < popSize && opponents.population[idx_j].scaledCentroidX >= population[i].scaledCentroidX)
+            while (idx_j < popSize && opponents.population[idx_j].absFitness >= population[i].absFitness)
             {
                 // TODO: edge case : 2 arrays are all zeros
                 // opponents.population[idx_j].fitness = popSize - i;
@@ -76,7 +87,7 @@ public:
             }
             population[i].fitness = popSize - idx_j;
             bestFitness = std::max(bestFitness, population[i].fitness);
-            fitnessSum += population[i].fitness;
+            fitnessSum += std::max(0.0f, population[i].fitness);
         }
 
         // fill in remaining fitness of opponents' population
@@ -187,16 +198,16 @@ public:
         // measure distance between 2 pairs and decide which 2 to survive
         if (distance(child1, parent1) + distance(child2, parent2) < distance(parent1, child2) + distance(parent2, child1))
         {
-            if (child1.scaledCentroidX < parent1.scaledCentroidX)
+            if (child1.scaledCentroidZ < parent1.scaledCentroidZ)
                 std::swap(child1, parent1);
-            if (child2.scaledCentroidX < parent2.scaledCentroidX)
+            if (child2.scaledCentroidZ < parent2.scaledCentroidZ)
                 std::swap(child2, parent2);
         }
         else
         {
-            if (child1.scaledCentroidX < parent2.scaledCentroidX)
+            if (child1.scaledCentroidZ < parent2.scaledCentroidZ)
                 std::swap(child1, parent2);
-            if (child2.scaledCentroidX < parent1.scaledCentroidX)
+            if (child2.scaledCentroidZ < parent1.scaledCentroidZ)
                 std::swap(child2, parent1);
         }
     }
@@ -209,8 +220,20 @@ public:
 
         for (int i = 0, len = robot1.cubes.size(); i < len; i++)
         {
-            v1.push_back(robot1.cubes[i].currType);
-            v2.push_back(robot2.cubes[i].currType);
+
+            // TODO: modified on 12-03
+            // v1.push_back(robot1.cubes[i].currType);
+            // v2.push_back(robot2.cubes[i].currType);
+            for (auto &s : robot1.cubes[i].springs)
+            {
+                v1.push_back(s->b);
+                v1.push_back(s->c);
+            }
+            for (auto &s : robot2.cubes[i].springs)
+            {
+                v2.push_back(s->b);
+                v2.push_back(s->c);
+            }
         }
         return measureDistance(v1, v2);
     }

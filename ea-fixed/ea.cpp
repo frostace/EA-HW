@@ -17,7 +17,7 @@
 int iterNums = 0;
 
 using namespace std;
-ofstream myfile, skeleton, energy;
+ofstream myfile, skeleton, energy, allskeleton;
 
 void writeToFile(string content)
 {
@@ -30,11 +30,11 @@ void writeToFile(string content)
 void ea()
 {
     // init population, bestDistance and bestRobotTypes
-    int sizeX = 1, sizeY = 1, sizeZ = 1;
+    int sizeX = 5, sizeY = 5, sizeZ = 5;
     float bestDistance = 0;
     std::string bestRobotTypes = "";
 
-    int popSize = 30;
+    int popSize = 32;
 
     Population population(popSize, sizeX, sizeY, sizeZ);
     std::cout << "init finish" << std::endl;
@@ -45,6 +45,8 @@ void ea()
         std::cout << "Gen#" + std::to_string(i) + " : " + std::to_string(population.bestDistance)
                   << " , avg: " << std::to_string(population.fitnessSum / popSize)
                   << std::endl;
+
+        // population.printAllFitness();
 
         if (population.bestDistance > bestDistance)
         {
@@ -58,13 +60,18 @@ void ea()
         population.regenerate(DETERMINISTIC_CROWDING);
     }
 
+    for (auto &robot : population.population)
+    {
+        allskeleton << robot.saveSkeleton();
+    }
+
     skeleton << bestRobotTypes;
 }
 
 void ea_coevolve()
 {
     // init population, bestDistance and bestRobotTypes
-    int sizeX = 4, sizeY = 4, sizeZ = 4;
+    int sizeX = 5, sizeY = 5, sizeZ = 5;
     float bestDistance = 0, genDistance = 0;
     std::string bestRobotTypes = "", genRobotTypes = "";
 
@@ -125,13 +132,22 @@ void ea_coevolve()
         population2.regenerate(DETERMINISTIC_CROWDING);
     }
 
+    for (auto &robot : population1.population)
+    {
+        allskeleton << robot.saveSkeleton();
+    }
+    for (auto &robot : population2.population)
+    {
+        allskeleton << robot.saveSkeleton();
+    }
+
     skeleton << bestRobotTypes;
 }
 
 void ea_flow()
 {
     // init population, bestDistance and bestRobotTypes
-    int sizeX = 4, sizeY = 4, sizeZ = 4;
+    int sizeX = 5, sizeY = 5, sizeZ = 5;
     float bestDistance = 0, genDistance = 0;
     std::string bestRobotTypes = "", genRobotTypes = "";
 
@@ -194,6 +210,15 @@ void ea_flow()
         std::swap(population1.population[randint(popSize)], population2.population[randint(popSize)]);
     }
 
+    for (auto &robot : population1.population)
+    {
+        allskeleton << robot.saveSkeleton();
+    }
+    for (auto &robot : population2.population)
+    {
+        allskeleton << robot.saveSkeleton();
+    }
+
     skeleton << bestRobotTypes;
 }
 
@@ -206,8 +231,9 @@ int main(int argc, char **argv)
     for (int t = 0; t < runtimes; t++)
     {
         // init file
-        skeleton.open("skeleton-" + to_string(t) + ".txt");
-        myfile.open("ea-" + to_string(t) + ".txt");
+        skeleton.open("skeleton-flow-" + to_string(t) + ".txt");
+        allskeleton.open("all-skeleton-flow-" + to_string(t) + ".txt");
+        myfile.open("ea-flow-" + to_string(t) + ".txt");
 
         // ea_coevolve();
         ea_flow();
@@ -215,6 +241,7 @@ int main(int argc, char **argv)
 
         myfile.close();
         skeleton.close();
+        allskeleton.close();
     }
 
     return 0;

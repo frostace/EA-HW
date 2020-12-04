@@ -10,6 +10,7 @@
 #include <chrono>
 #include <algorithm>
 #include <memory>
+#include <cmath>
 #include "stdlib.h"
 #include "stdio.h"
 
@@ -41,8 +42,9 @@ private:
         float b = plane_args[1];
         float c = plane_args[2];
         float d = plane_args[3];
+        float e = plane_args[4];
         // take use of bipartitioning of a hyperplane + / -
-        return a * (x - c) + b * (y - d) - z > 0;
+        return a * (x - c) + b * (y - d) - (z - e) > 0;
     }
     bool classifier(std::vector<float> &plane_args, std::vector<float> coords)
     {
@@ -50,8 +52,9 @@ private:
         float b = plane_args[1];
         float c = plane_args[2];
         float d = plane_args[3];
+        float e = plane_args[4];
         // take use of bipartitioning of a hyperplane + / -
-        return a * (coords[0] - c) + b * (coords[1] - d) - coords[2] > 0;
+        return a * (coords[0] - c) + b * (coords[1] - d) - (coords[2] - e) > 0;
     }
     bool classifier(std::vector<float> &plane_args, std::vector<float> coords, int polarity)
     {
@@ -59,8 +62,9 @@ private:
         float b = plane_args[1];
         float c = plane_args[2];
         float d = plane_args[3];
+        float e = plane_args[4];
         // take use of bipartitioning of a hyperplane + / -
-        return polarity * (a * (coords[0] - c) + b * (coords[1] - d) - coords[2]) > 0;
+        return polarity * (a * (coords[0] - c) + b * (coords[1] - d) - (coords[2] - e)) > 0;
     }
 
     int assignType(float i, float j, float k)
@@ -78,6 +82,8 @@ private:
         // TODO: modified on 11-25
         // if (k == 0 && (i == 1 || j == 1))
         //     return 4;
+        // TODO: modified on 12-03
+        // return rand() % 4;
         return cubeTypes[i][j][k];
     }
 
@@ -148,10 +154,18 @@ public:
     float totalEk;
     float totalEp;
     float centroidX = 0;
+    float centroidY = 0;
+    float centroidZ = 0;
+    float centroidZMax = 0;
     float scaledCentroidX = 0;
+    float scaledCentroidY = 0;
+    float scaledCentroidZ = 0;
     float scaledCentroidXOffset = 0;
+    float scaledCentroidYOffset = 0;
+    float scaledCentroidZOffset = 0;
     float XScale = 0;
     float fitness = 0;
+    float absFitness = 0;
 
     // constructor for n * n * n cubes
     Creature(int n) : idim{n}, jdim{n}, kdim{n}
@@ -198,8 +212,6 @@ public:
             {
                 for (int k = 0; k < kmax; k++)
                 {
-                    // int type = assignType(i, j, k);
-                    // int type = rand() % 4;
                     int type = hardCodeType(i, j, k);
                     std::vector<std::shared_ptr<Mass>> cubeMasses = {};
                     std::vector<std::shared_ptr<Spring>> cubeSprings = {};
@@ -248,6 +260,8 @@ public:
         totalEk = 0;
         totalEp = 0;
         float centroidXTotal = 0;
+        float centroidYTotal = 0;
+        float centroidZTotal = 0;
         for (auto &cube : cubes)
         {
             // if (wind)
@@ -264,10 +278,20 @@ public:
         for (auto &cube : cubes)
         {
             cube.clearComputed();
+            // TODO: if cube type is air, do I want to calculate its centroid location ?
+            // for now, I think this helps with eliminating torn apart robots
             centroidXTotal += cube.centroidX;
+            centroidYTotal += cube.centroidY;
+            centroidZTotal += cube.centroidZ;
         }
         centroidX = centroidXTotal / cubes.size();
-        scaledCentroidX = std::max(0.0f, centroidX / XScale - scaledCentroidXOffset);
+        centroidY = centroidYTotal / cubes.size();
+        centroidZ = centroidZTotal / cubes.size();
+        centroidZMax = std::max(centroidZMax, centroidZ);
+        // TODO: modified on 12-03
+        scaledCentroidX = centroidX / XScale - scaledCentroidXOffset;
+        scaledCentroidY = centroidY / XScale - scaledCentroidYOffset;
+        scaledCentroidZ = std::max(0.0f, centroidZ / XScale - scaledCentroidZOffset);
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed_seconds = end - start;
         // std::cout << to_string(28 / elapsed_seconds.count()) << std::endl;
@@ -281,6 +305,8 @@ public:
         totalEk = 0;
         totalEp = 0;
         float centroidXTotal = 0;
+        float centroidYTotal = 0;
+        float centroidZTotal = 0;
         for (auto &cube : cubes)
         {
             cube.iterate(breathing);
@@ -295,9 +321,15 @@ public:
         {
             cube.clearComputed();
             centroidXTotal += cube.centroidX;
+            centroidYTotal += cube.centroidY;
+            centroidZTotal += cube.centroidZ;
         }
         centroidX = centroidXTotal / cubes.size();
-        scaledCentroidX = centroidX / XScale - scaledCentroidXOffset;
+        centroidY = centroidYTotal / cubes.size();
+        centroidZ = centroidZTotal / cubes.size();
+        scaledCentroidX = std::max(0.0f, centroidX / XScale - scaledCentroidXOffset);
+        scaledCentroidY = std::max(0.0f, centroidY / XScale - scaledCentroidYOffset);
+        scaledCentroidZ = std::max(0.0f, centroidZ / XScale - scaledCentroidZOffset);
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed_seconds = end - start;
         // std::cout << to_string(28 / elapsed_seconds.count()) << std::endl;
@@ -600,7 +632,6 @@ public:
         // TODO: attempting to remove settled status record here since we don't reuse settle status in real regenerations
         if (settled)
         {
-            std::cout << "fuck" << std::endl;
             // pass computed settled positions to masses and return
             for (auto &it : masses)
             {
@@ -621,11 +652,17 @@ public:
         // iterate without breathing
         int frameNum = 0;
         // Loop for several iterations and measure X distance at the end
-        while (frameNum < 250) // 10 cycles
+        while (frameNum < 20) // .1 cycles
         {
             frameNum += 1;
             iterate(false);
         }
+        // TODO: modified on 12-01
+        // while (frameNum < 450) // 8 cycles: 250 ~ 450
+        // {
+        //     frameNum += 1;
+        //     iterate();
+        // }
         // record settled positions
         for (auto &it : masses)
         {
@@ -634,6 +671,8 @@ public:
             // it.second->clearMotion();
         }
         scaledCentroidXOffset = centroidX / XScale;
+        scaledCentroidYOffset = centroidY / XScale;
+        scaledCentroidZOffset = centroidZ / XScale;
         scaledCentroidX = 0;
     }
 
@@ -642,12 +681,19 @@ public:
         int iterNums = 0;
         int frameNum = 0;
         // Loop for several iterations and measure X distance at the end
-        while (frameNum < 250)
+        while (frameNum < 400) // 2 cycles
         {
             frameNum += 1;
             iterate();
         }
-        fitness = scaledCentroidX;
+        fitness = std::sqrt(scaledCentroidX * scaledCentroidX + scaledCentroidY * scaledCentroidY);
+        // TODO: modified on 12-03
+        // penetrate too high Z coord
+        if (scaledCentroidZ > 0.5)
+        {
+            fitness = 0;
+        }
+        absFitness = fitness;
     }
 
     std::vector<float> genRandomArgs()
@@ -659,6 +705,7 @@ public:
         }
         output.push_back(rand() / (float)RAND_MAX * idim);
         output.push_back(rand() / (float)RAND_MAX * jdim);
+        output.push_back(rand() / (float)RAND_MAX * kdim);
         return output;
     }
 

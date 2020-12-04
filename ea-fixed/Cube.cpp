@@ -133,7 +133,10 @@ public:
     float totalEp = 0.0f; // total potential energy
     float totalEk = 0.0f; // total kinetic energy
     float centroidX = 0.0f;
+    float centroidY = 0.0f;
+    float centroidZ = 0.0f;
     int prevType;
+    float prevK;
     float prevB;
     float prevC;
     int currType;
@@ -260,13 +263,19 @@ public:
     void integrate()
     {
         float centroidXTotal = 0;
+        float centroidYTotal = 0;
+        float centroidZTotal = 0;
         for (auto &m : masses)
         {
             m->applyForce();
             m->clearForce();
             centroidXTotal += m->pos[0];
+            centroidYTotal += m->pos[1];
+            centroidZTotal += m->pos[2];
         }
         centroidX = centroidXTotal / 8;
+        centroidY = centroidYTotal / 8;
+        centroidZ = centroidZTotal / 8;
         updatePositions();
     }
 
@@ -321,8 +330,10 @@ public:
     void mutate(int springIdx)
     {
         // mutate spring idx
+        // prevK = springs[springIdx]->k;
         prevB = springs[springIdx]->b;
         prevC = springs[springIdx]->c;
+        // springs[springIdx]->k = (prevK + 0.01) * genMagnitude();
         springs[springIdx]->b = (prevB + 0.01) * genMagnitude();
         springs[springIdx]->c = (prevC + 0.01) * genMagnitude();
     }
@@ -343,6 +354,7 @@ public:
     void recover(int springIdx)
     {
         // revert spring params back to prev set of params
+        springs[springIdx]->k = prevK;
         springs[springIdx]->b = prevB;
         springs[springIdx]->c = prevC;
     }

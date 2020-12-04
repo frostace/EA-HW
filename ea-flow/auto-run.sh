@@ -1,1 +1,0 @@
-OMP_NUM_THREADS=4 ./ea.out 1

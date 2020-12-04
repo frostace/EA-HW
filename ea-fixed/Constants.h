@@ -6,23 +6,23 @@
 #include <cmath>
 
 const int evalNums = 100000;
-const float mutationRate = 0.1;
-const int generationNum = 1000;
+const float mutationRate = 0.4;
+const int generationNum = 100;
 
 const double GRAVITY = 9.81;         // gravitational acceleration
 const double damping = 0.999;        // damping ratio
-const double dt = 0.0008;            // simulation time step
+const double dt = 0.001;             // simulation time step
 const double k_vertices_soft = 2000; // stiffness of springs
 const double k_ground = 2000000;     // stiffness of ground
 const double friction_mu_s = 1;      // friction coeff of rubber-concrete
 const double friction_mu_k = 0.8;
 double omega = 10;
 const float pi = 3.1415926535897932384626;
-const double k_w = 100 * pi;
+const double k_w = 20 * pi;
 
-std::vector<float> k_spring = {2000, 20000, 2000, 2000, 0};
-std::vector<float> b_spring = {0, 0, 0.02, 0.02, 0};
-std::vector<float> c_spring = {0, 0, 0, pi, 0};
+std::vector<float> k_spring = {5000, 20000, 6000, 6000, 0};
+std::vector<float> b_spring = {0, 0, 0.1, 0.1, 0};
+std::vector<float> c_spring = {2 * pi, 2 * pi, 2 * pi, pi, 2 * pi};
 std::vector<std::vector<float>> cube_colors = {
     // types:                    color           |  k         | b     | c
     {0.172f, 0.243f, 0.313f}, // midnight blue      1,000       0       0
