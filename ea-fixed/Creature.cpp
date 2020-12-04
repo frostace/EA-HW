@@ -652,7 +652,7 @@ public:
         // iterate without breathing
         int frameNum = 0;
         // Loop for several iterations and measure X distance at the end
-        while (frameNum < 20) // .1 cycles
+        while (frameNum < 14) // .1 cycles
         {
             frameNum += 1;
             iterate(false);
@@ -681,7 +681,7 @@ public:
         int iterNums = 0;
         int frameNum = 0;
         // Loop for several iterations and measure X distance at the end
-        while (frameNum < 400) // 2 cycles
+        while (frameNum < 267) // 2 cycles
         {
             frameNum += 1;
             iterate();

@@ -30,7 +30,7 @@ void writeToFile(string content)
 void ea()
 {
     // init population, bestDistance and bestRobotTypes
-    int sizeX = 5, sizeY = 5, sizeZ = 5;
+    int sizeX = 4, sizeY = 4, sizeZ = 4;
     float bestDistance = 0;
     std::string bestRobotTypes = "";
 
@@ -71,7 +71,7 @@ void ea()
 void ea_coevolve()
 {
     // init population, bestDistance and bestRobotTypes
-    int sizeX = 5, sizeY = 5, sizeZ = 5;
+    int sizeX = 4, sizeY = 4, sizeZ = 4;
     float bestDistance = 0, genDistance = 0;
     std::string bestRobotTypes = "", genRobotTypes = "";
 
@@ -147,7 +147,7 @@ void ea_coevolve()
 void ea_flow()
 {
     // init population, bestDistance and bestRobotTypes
-    int sizeX = 5, sizeY = 5, sizeZ = 5;
+    int sizeX = 4, sizeY = 4, sizeZ = 4;
     float bestDistance = 0, genDistance = 0;
     std::string bestRobotTypes = "", genRobotTypes = "";
 
