@@ -346,7 +346,7 @@ public:
         }
         // mutate a single cube
         float randomP = rand() / (float)RAND_MAX;
-        if (randomP < 0.9) // 0.8 * 0.15 = 0.12
+        if (randomP < 0.1) // 0.8 * 0.15 = 0.12
         {
             // update a random spring arguments
             latestMutationType = 0;
@@ -438,6 +438,7 @@ public:
         // fill one part of spring params from parentA
         // fill the other part of spring params from parentB
         // classify by center of the spring
+        /*
         for (auto &it : springs)
         {
             std::string hashed = it.first; // 1,2,3&2,3,4
@@ -454,7 +455,7 @@ public:
                 it.second->c = parentB.springs[hashed]->c;
             }
         }
-        /*
+        */
         // classify by cube
         for (int i = 0; i < cubes.size(); i++)
         {
@@ -469,7 +470,6 @@ public:
                 cubes[i].mutateType(parentB.cubes[i].currType);
             }
         }
-        */
 
         settled = false;
     }
@@ -479,6 +479,7 @@ public:
         // fill one part of spring params from parentA
         // fill the other part of spring params from parentB
         // classify by center of the spring
+        /*
         for (auto &it : springs)
         {
             std::string hashed = it.first; // 1,2,3&2,3,4
@@ -495,8 +496,8 @@ public:
                 it.second->c = parentB.springs[hashed]->c;
             }
         }
+        */
         // classify by cube
-        /*
         for (int i = 0; i < cubes.size(); i++)
         {
             if (classifier(planeArgs, cubes[i].masses[0]->pos, polarity))
@@ -510,7 +511,6 @@ public:
                 cubes[i].mutateType(parentB.cubes[i].currType);
             }
         }
-        */
 
         settled = false;
     }

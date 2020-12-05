@@ -231,13 +231,13 @@ int main(int argc, char **argv)
     for (int t = 0; t < runtimes; t++)
     {
         // init file
-        skeleton.open("skeleton-flow-" + to_string(t) + ".txt");
-        allskeleton.open("all-skeleton-flow-" + to_string(t) + ".txt");
-        myfile.open("ea-flow-" + to_string(t) + ".txt");
+        skeleton.open("skeleton-" + to_string(t) + ".txt");
+        allskeleton.open("all-skeleton-" + to_string(t) + ".txt");
+        myfile.open("ea-" + to_string(t) + ".txt");
 
         // ea_coevolve();
-        ea_flow();
-        // ea();
+        // ea_flow();
+        ea();
 
         myfile.close();
         skeleton.close();

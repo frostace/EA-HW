@@ -44,7 +44,7 @@ std::vector<std::vector<int>> refSpringIndices = {{25, 26, 22, 27, 23, 24},
                                                   {7, 8, 0, 13, 1, 2}};
 
 // generative representation radius
-const int radius = 1;
+const int radius = 2;
 std::vector<std::vector<int>> directions = {
     {0, 0, 1},  // up
     {1, 0, 0},  // front
