@@ -1,0 +1,9 @@
+robot-video1: 0.184 m/s
+robot-video2: 0.163 m/s
+robot-video3: 0.213 m/s
+robot-video4: 0.292 m/s
+robot-video5: 0.169 m/s
+robot-video6: 0.417 m/s
+robot-video7: 0.426 m/s
+robot-video8: 0.143 m/s
+robot-video9: 0.146 m/s
